@@ -116,6 +116,12 @@ module.exports = {
       gas: 7000000,
       gasPrice: 25100000000,
     },
+    base: {
+      url: "https://mainnet.base.org",
+      accounts: [`0x${process.env.PRIVATE_KEY}`],
+      gas: 7000000,
+      gasPrice: 69294000000,
+    },
   },
   solidity: {
     version: "0.8.28",
@@ -139,6 +145,7 @@ module.exports = {
       polygonMumbai: process.env.POLYGON_API_KEY,
       arbitrumOne: process.env.ARBITRUM_API_KEY,
       arbitrumOneGoerli: process.env.ARBITRUM_API_KEY,
+      base: process.env.BASE_API_KEY
     },
     customChains: [
       {
@@ -147,6 +154,14 @@ module.exports = {
         urls: {
           apiURL: "https://api-goerli.arbiscan.io/api",
           browserURL: "https://goerli.arbiscan.io/",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
         },
       },
     ],

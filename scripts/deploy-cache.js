@@ -15,12 +15,18 @@ async function main() {
     (beforeBalance / 10 ** 18).toFixed(2).toString()
   );
 
+  // Fetch the current gas price dynamically
+  const gasPrice = await hre.ethers.provider.getGasPrice();
+  console.log("Current Gas Price (in gwei):", hre.ethers.utils.formatUnits(gasPrice, "gwei"));
+
   // Load the contract factory
   const CACHE = await hre.ethers.getContractFactory("CACHE");
 
   console.log("Initializing contract deployment...");
   // Deploy the contract with the constructor argument
-  const contractInstance = await CACHE.deploy("0x9ac64cc6e4415144c455bd8e4837fea55603e5c3");
+  const contractInstance = await CACHE.deploy("0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24", {
+    gasPrice: gasPrice, // Dynamically set gas price
+  });
   console.log("Deploying...");
 
   // Wait until deployment is completed
@@ -37,13 +43,36 @@ async function main() {
 
   console.log("Verifying on Etherscan...");
   try {
-    await hre.run("verify:verify", {
-      address: contractInstance.address,
-      constructorArguments: ["0x9ac64cc6e4415144c455bd8e4837fea55603e5c3"],
-    });
-    console.log("Contract verified successfully!");
+    await verifyContractWithRetries(contractInstance.address, ["0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24"]);
   } catch (error) {
-    console.error("Verification failed:", error.message);
+    console.error("Contract verification ultimately failed:", error.message);
+  }  
+}
+
+async function verifyContractWithRetries(address, constructorArguments, maxRetries = 5, delayMs = 5000) {
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      console.log(`Verification attempt ${attempt + 1}...`);
+      await hre.run("verify:verify", {
+        address: address,
+        constructorArguments: constructorArguments,
+      });
+      console.log("Contract verified successfully!");
+      return; // Exit the loop if verification is successful
+    } catch (error) {
+      console.error(`Verification failed on attempt ${attempt + 1}:`, error.message);
+
+      if (attempt === maxRetries - 1) {
+        console.error("Max retries reached. Verification failed.");
+        break;
+      }
+
+      console.log(`Retrying in ${delayMs / 1000} seconds...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs)); // Wait before retrying
+      attempt++;
+    }
   }
 }
 

@@ -14,9 +14,9 @@ async function main() {
     (beforeBalance / 10 ** 18).toFixed(2).toString()
   );
 
-  // const IncomePresale = await ethers.getContractFactory("IncomePresale");
+  // const Presale = await ethers.getContractFactory("Presale");
   // console.log("Init ....... ");
-  // const contract = await IncomePresale.deploy();
+  // const contract = await Presale.deploy("0x0731B8B7f1Fc7288427B8965F07905B4194fc2ac", "0x5747a7f258Bd38908A551CE6d76b8C2A428D7586", 50);
   // console.log("Deploying...");
   // const contractAddr = await contract.deployed();
   // console.log(" === Deployed Address === ");
@@ -24,8 +24,9 @@ async function main() {
 
   console.log("Verifying...");
   await hre.run("verify:verify", {
-    address: "0xAA572dEacBe458B2f7A91BC2ffB12D385e6eE815",
-    constructorArguments: [],
+    // address: contractAddr.address,
+    address: "0xF81d3f184d171caFD187684cd88E7dd986E38b1f",
+    constructorArguments: ["0x0731B8B7f1Fc7288427B8965F07905B4194fc2ac", "0x5747a7f258Bd38908A551CE6d76b8C2A428D7586", 50],
   });
 
   const afterBalance = await deployer.getBalance();
