@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "@openzeppelin/contracts/access/Ownable2Step.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 /*
  * Pre Sale Contract
  */
-contract Presale is Ownable2Step {
-    using SafeMath for uint256;
+contract Presale is Ownable {
     using SafeERC20 for IERC20;
 
     address public saleToken;
@@ -27,7 +25,7 @@ contract Presale is Ownable2Step {
     event UnusedTokensReturned(uint256 amount);
     event RemoveWrongTokens(address indexed token);
 
-    constructor(address _saleToken, address _marketingWallet, uint256 _tokensPerUnit) payable Ownable2Step() {
+    constructor(address _saleToken, address _marketingWallet, uint256 _tokensPerUnit) Ownable(msg.sender) payable {
         require(_saleToken != address(0), "Presale: Invalid saleToken addr");
         require(_marketingWallet != address(0), "Presale: Invalid marketing addr");
         require(_tokensPerUnit != 0, "Presale: tokensPerUnit err");
@@ -93,7 +91,7 @@ contract Presale is Ownable2Step {
      */
     function _processContribution(address wallet_, uint256 amount_) internal {
         require(amount_ != 0, "Presale: amount err");
-        uint256 tokensToSend = amount_.mul(tokensPerUnit);
+        uint256 tokensToSend = amount_ * tokensPerUnit;
         uint256 tokenBalance = IERC20(saleToken).balanceOf(address(this));
         require(tokensToSend < tokenBalance + 1, "Presale: Not enough tokens remain");
 

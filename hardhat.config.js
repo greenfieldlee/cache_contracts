@@ -1,9 +1,14 @@
+require("@nomicfoundation/hardhat-toolbox");
+
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+  solidity: "0.8.28",
+};
 require("dotenv").config();
-require("@nomiclabs/hardhat-waffle");
-require("@nomiclabs/hardhat-etherscan");
+require("@nomicfoundation/hardhat-chai-matchers");
+require("@nomicfoundation/hardhat-verify");
 require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
-require("@nomiclabs/hardhat-ethers");
 // require("@openzeppelin/hardhat-upgrades");
 
 const fs = require("fs");
@@ -126,11 +131,18 @@ module.exports = {
   solidity: {
     version: "0.8.28",
     settings: {
+      viaIR: true,
       optimizer: {
         enabled: true,
         runs: 200,
       },
     },
+  },
+  paths: {
+    sources: "./contracts", // Default location for contracts
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
   },
   etherscan: {
     apiKey: {

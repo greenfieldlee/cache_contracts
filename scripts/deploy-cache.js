@@ -1,86 +1,99 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// When running the script with `npx hardhat run <script>` you'll find the Hardhat
-// Runtime Environment's members available in the global scope.
+// scripts/deploy.js
+
 const hre = require("hardhat");
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
+  const { ethers } = hre;
+
+  // 1. Get signer using ethers.getSigners()
+  const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
 
-  const beforeBalance = await deployer.getBalance();
+  // 2. Correctly get & format the deployer's balance
+  const beforeBalance = await deployer.provider.getBalance(deployer.address);
+
+  // const routerAddress = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24"; // Base network
+  const routerAddress = "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3"; // BSC Test network
+  const adminAddress = "0x852e87FB66b380Ea9aA8D70A96CdC0db15C15339";
+  
   console.log(
-    "Account balance:",
-    (beforeBalance / 10 ** 18).toFixed(2).toString()
+    "Account balance (ETH):",
+    ethers.formatUnits(beforeBalance)
   );
 
-  // Fetch the current gas price dynamically
-  const gasPrice = await hre.ethers.provider.getGasPrice();
-  console.log("Current Gas Price (in gwei):", hre.ethers.utils.formatUnits(gasPrice, "gwei"));
+  // 3. Dynamically fetch the current gas price
+  const {gasPrice} = await ethers.provider.getFeeData();
+  console.log(
+    "Current Gas Price (Gwei):",
+    ethers.formatUnits(gasPrice, "gwei")
+  );
 
-  // Load the contract factory
-  const CACHE = await hre.ethers.getContractFactory("CACHE");
-
+  // 4. Load the contract factory
+  const CACHE = await ethers.getContractFactory("CACHE");
   console.log("Initializing contract deployment...");
-  // Deploy the contract with the constructor argument
-  const contractInstance = await CACHE.deploy("0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24", {
-    gasPrice: gasPrice, // Dynamically set gas price
-  });
-  console.log("Deploying...");
 
-  // Wait until deployment is completed
-  await contractInstance.deployed();
-
-  console.log(" === Contract Deployed Successfully === ");
-  console.log("Contract Address:", contractInstance.address);
-
-  const afterBalance = await deployer.getBalance();
-  console.log(
-    "Total Consumed balance:",
-    ((beforeBalance - afterBalance) / 10 ** 18).toFixed(2).toString()
+  // 5. Deploy with constructor arguments + custom gasPrice
+  //    (BSC Testnet Router + Some other address as an example)
+  const contractInstance = await CACHE.deploy(
+    routerAddress, 
+    adminAddress, 
+    { gasPrice }
   );
 
-  console.log("Verifying on Etherscan...");
-  try {
-    await verifyContractWithRetries(contractInstance.address, ["0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24"]);
-  } catch (error) {
-    console.error("Contract verification ultimately failed:", error.message);
-  }  
+  console.log("Deploying...");
+  await contractInstance.waitForDeployment();
+
+  console.log("=== Contract Deployed Successfully ===");
+  console.log("Contract Address:", contractInstance.target);
+
+  // 6. Check consumed balance
+  const afterBalance = await deployer.provider.getBalance(deployer.address);
+  console.log(
+    "Total Consumed balance (ETH):",
+    ethers.formatEther(beforeBalance - afterBalance)
+  );
+
+  // 7. Verify the contract on BscScan (or Etherscan) with retries
+  console.log("Verifying on BscScan...");
+  await verifyContractWithRetries(contractInstance.target, [
+    routerAddress,
+    adminAddress
+  ]);
 }
 
-async function verifyContractWithRetries(address, constructorArguments, maxRetries = 5, delayMs = 5000) {
-  let attempt = 0;
-
-  while (attempt < maxRetries) {
+async function verifyContractWithRetries(
+  address,
+  constructorArguments,
+  maxRetries = 5,
+  delayMs = 5000
+) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       console.log(`Verification attempt ${attempt + 1}...`);
       await hre.run("verify:verify", {
-        address: address,
-        constructorArguments: constructorArguments,
+        address,
+        constructorArguments,
       });
-      console.log("Contract verified successfully!");
-      return; // Exit the loop if verification is successful
+      console.log("✅ Contract verified successfully!");
+      return;
     } catch (error) {
       console.error(`Verification failed on attempt ${attempt + 1}:`, error.message);
 
       if (attempt === maxRetries - 1) {
-        console.error("Max retries reached. Verification failed.");
-        break;
+        console.error("❌ Max retries reached. Verification failed.");
+        return;
       }
 
       console.log(`Retrying in ${delayMs / 1000} seconds...`);
-      await new Promise((resolve) => setTimeout(resolve, delayMs)); // Wait before retrying
-      attempt++;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
+// Execute the deployment
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error("Error deploying contract:", error.message);
+    console.error("🚨 Error deploying contract:", error.message);
     process.exit(1);
   });
